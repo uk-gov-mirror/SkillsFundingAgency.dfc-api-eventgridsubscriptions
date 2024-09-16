@@ -7,15 +7,9 @@ using Microsoft.Azure.EventGrid.Models;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Newtonsoft.Json;
-using System;
 using System.Diagnostics;
-using System.IO;
 using System.Net;
-using System.Net.Http;
-using System.Text;
 using System.Text.Json;
-using System.Threading.Tasks;
 
 namespace DFC.EventGridSubscriptions.ApiFunction.Function
 {

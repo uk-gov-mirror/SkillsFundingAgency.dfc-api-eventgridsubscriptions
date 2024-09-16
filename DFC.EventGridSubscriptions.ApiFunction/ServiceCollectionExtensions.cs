@@ -2,8 +2,6 @@
 using DFC.EventGridSubscriptions.Services.Interface;
 using Microsoft.Azure.Management.EventGrid;
 using Microsoft.Extensions.DependencyInjection;
-using System;
-using System.Threading.Tasks;
 
 namespace DFC.EventGridSubscriptions.ApiFunction
 {

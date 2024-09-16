@@ -8,13 +8,9 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.Rest;
 using Newtonsoft.Json;
-using System;
 using System.Diagnostics;
-using System.IO;
-using System.Linq;
 using System.Net;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
 using System.Web.Http;
 
 namespace DFC.EventGridSubscriptions.ApiFunction.Function
