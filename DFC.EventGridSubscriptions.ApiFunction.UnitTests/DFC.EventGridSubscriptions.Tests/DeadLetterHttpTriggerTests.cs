@@ -21,8 +21,7 @@ namespace DFC.EventGridSubscriptions.ApiFunction.UnitTests.DFC.EventGridSubscrip
     public class DeadLetterHttpTriggerTests
     {
         private readonly DeadLetterHttpTrigger _executeFunction;
-        private readonly ILogger _log;
-        private readonly HttpRequest _request;
+        private readonly ILogger<DeadLetterHttpTrigger> _log;
         private readonly ISubscriptionService subscriptionRegistrationService;
         private readonly IOptionsMonitor<EventGridSubscriptionClientOptions> eventGridSubscriptionClientOptions;
 
@@ -32,9 +31,9 @@ namespace DFC.EventGridSubscriptions.ApiFunction.UnitTests.DFC.EventGridSubscrip
 
             eventGridSubscriptionClientOptions = A.Fake<IOptionsMonitor<EventGridSubscriptionClientOptions>>();
 
-            _log = A.Fake<ILogger>();
+            _log = A.Fake<ILogger<DeadLetterHttpTrigger>>();
 
-            _executeFunction = new DeadLetterHttpTrigger(eventGridSubscriptionClientOptions, subscriptionRegistrationService);
+            _executeFunction = new DeadLetterHttpTrigger(eventGridSubscriptionClientOptions, subscriptionRegistrationService, _log);
         }
 
         [Fact]
@@ -98,7 +97,7 @@ namespace DFC.EventGridSubscriptions.ApiFunction.UnitTests.DFC.EventGridSubscrip
 
         private async Task<IActionResult> RunFunction(HttpRequest request)
         {
-            return await _executeFunction.Run(request, _log).ConfigureAwait(false);
+            return await _executeFunction.Run(request).ConfigureAwait(false);
         }
 
         protected static EventGridEvent[] BuildValidEventGridEvent<TModel>(string eventType, TModel data)

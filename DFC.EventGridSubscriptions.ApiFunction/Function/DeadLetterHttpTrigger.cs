@@ -23,15 +23,17 @@ namespace DFC.EventGridSubscriptions.ApiFunction.Function
     {
         private readonly IOptionsMonitor<EventGridSubscriptionClientOptions> options;
         private readonly ISubscriptionService subscriptionService;
+        private readonly ILogger log;
 
-        public DeadLetterHttpTrigger(IOptionsMonitor<EventGridSubscriptionClientOptions> options, ISubscriptionService subscriptionService)
+        public DeadLetterHttpTrigger(IOptionsMonitor<EventGridSubscriptionClientOptions> options, ISubscriptionService subscriptionService, ILogger<DeadLetterHttpTrigger> log)
         {
             this.options = options;
             this.subscriptionService = subscriptionService;
+            this.log = log;
         }
 
         [Function("ProcessDeadLetter")]
-        public async Task<IActionResult> Run([HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "DeadLetter/api/updates")] HttpRequest req, ILogger log)
+        public async Task<IActionResult> Run([HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "DeadLetter/api/updates")] HttpRequest req)
         {
             req.EnableBuffering();
             Initialise(req);

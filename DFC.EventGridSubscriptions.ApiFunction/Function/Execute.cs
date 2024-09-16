@@ -26,28 +26,30 @@ namespace DFC.EventGridSubscriptions.ApiFunction.Function
     {
         private readonly ISubscriptionService subscriptionRegistrationService;
         private readonly IOptionsMonitor<AdvancedFilterOptions> advancedFilterOptions;
+        private readonly ILogger log;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="Execute"/> class.
         /// </summary>
         /// <param name="subscriptionRegistrationService">A Subscription Registration Service.</param>
         /// <param name="advancedFilterOptions">The Advanced Filter Options.</param>
-        public Execute(ISubscriptionService subscriptionRegistrationService, IOptionsMonitor<AdvancedFilterOptions> advancedFilterOptions)
+        /// <param name="log">The Logger.</param>
+        public Execute(ISubscriptionService subscriptionRegistrationService, IOptionsMonitor<AdvancedFilterOptions> advancedFilterOptions, ILogger<Execute> log)
         {
             this.subscriptionRegistrationService = subscriptionRegistrationService;
             this.advancedFilterOptions = advancedFilterOptions;
+            this.log = log;
         }
 
         /// <summary>
         /// Runs the function.
         /// </summary>
         /// <param name="req">The Request.</param>
-        /// <param name="log">The Logger.</param>
         /// <param name="subscriptionName">The subscription name.</param>
         /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
         [Function("Execute")]
         public async Task<IActionResult> Run(
-            [HttpTrigger(AuthorizationLevel.Anonymous, "post", "delete", "get", Route = "Execute/{subscriptionName?}")] HttpRequest req, ILogger log, string subscriptionName)
+            [HttpTrigger(AuthorizationLevel.Anonymous, "post", "delete", "get", Route = "Execute/{subscriptionName?}")] HttpRequest req, string subscriptionName)
         {
             try
             {

@@ -1,5 +1,4 @@
 ﻿using DFC.Compui.Subscriptions.Pkg.Data;
-using DFC.EventGridSubscriptions.ApiFunction.ServiceResult;
 using DFC.EventGridSubscriptions.Data;
 using DFC.EventGridSubscriptions.Services.Interface;
 using FakeItEasy;
@@ -17,6 +16,7 @@ using System.Net;
 using System.Text;
 using System.Threading.Tasks;
 using System.Web.Http;
+using DFC.EventGridSubscriptions.ApiFunction.Function;
 using Xunit;
 
 namespace DFC.EventGridSubscriptions.ApiFunction.UnitTests.DFC.EventGridSubscriptions.Tests
@@ -24,7 +24,7 @@ namespace DFC.EventGridSubscriptions.ApiFunction.UnitTests.DFC.EventGridSubscrip
     public class ExecuteHttpTriggerTests
     {
         private readonly Execute _executeFunction;
-        private readonly ILogger _log;
+        private readonly ILogger<Execute> _log;
         private readonly HttpRequest _request;
         private readonly ISubscriptionService subscriptionRegistrationService;
         private readonly IOptionsMonitor<AdvancedFilterOptions> advancedFilterOptions;
@@ -37,9 +37,9 @@ namespace DFC.EventGridSubscriptions.ApiFunction.UnitTests.DFC.EventGridSubscrip
 
             advancedFilterOptions = A.Fake<IOptionsMonitor<AdvancedFilterOptions>>();
 
-            _log = A.Fake<ILogger>();
+            _log = A.Fake<ILogger<Execute>>();
 
-            _executeFunction = new Execute(subscriptionRegistrationService, advancedFilterOptions);
+            _executeFunction = new Execute(subscriptionRegistrationService, advancedFilterOptions, _log);
         }
 
         [Fact]
@@ -408,7 +408,7 @@ namespace DFC.EventGridSubscriptions.ApiFunction.UnitTests.DFC.EventGridSubscrip
 
         private async Task<IActionResult> RunFunction(string subscriptionName)
         {
-            return await _executeFunction.Run(_request, _log, subscriptionName).ConfigureAwait(false);
+            return await _executeFunction.Run(_request, subscriptionName).ConfigureAwait(false);
         }
 
         private string GetRequestBody(bool includeEndpoint, bool includeSimpleFilter, bool includeAdvancedFilter, bool includeName, string subscriptionName = "A-Test-Subscription", int numberOfFilters = 1, string endpointAddress = "http://somewhere.com/somewebhook/receive", bool isUriAbsolute = true)
