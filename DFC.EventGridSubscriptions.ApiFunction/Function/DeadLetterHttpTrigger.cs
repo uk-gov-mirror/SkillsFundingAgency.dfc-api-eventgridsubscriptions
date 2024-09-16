@@ -1,9 +1,10 @@
 ﻿using DFC.EventGridSubscriptions.Data;
 using DFC.EventGridSubscriptions.Services.Interface;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.EventGrid;
 using Microsoft.Azure.EventGrid.Models;
-using Microsoft.Azure.WebJobs;
-using Microsoft.Azure.WebJobs.Extensions.Http;
+using Microsoft.Azure.Functions.Worker;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
@@ -13,9 +14,10 @@ using System.IO;
 using System.Net;
 using System.Net.Http;
 using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
 
-namespace DFC.EventGridSubscriptions.ApiFunction
+namespace DFC.EventGridSubscriptions.ApiFunction.Function
 {
     public class DeadLetterHttpTrigger
     {
@@ -28,21 +30,23 @@ namespace DFC.EventGridSubscriptions.ApiFunction
             this.subscriptionService = subscriptionService;
         }
 
-        [FunctionName("ProcessDeadLetter")]
-        public async Task<HttpResponseMessage> Run([HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "DeadLetter/api/updates")] HttpRequestMessage req, ILogger log)
+        [Function("ProcessDeadLetter")]
+        public async Task<IActionResult> Run([HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "DeadLetter/api/updates")] HttpRequest req, ILogger log)
         {
+            req.EnableBuffering();
             Initialise(req);
 
             log.LogInformation($"C# HTTP trigger function begun");
             string response = string.Empty;
 
-            if (req.Content == null)
+            if (req.Body == null)
             {
-                return new HttpResponseMessage(HttpStatusCode.NoContent);
+                return new NoContentResult();
             }
 
-            string requestContent = await req.Content.ReadAsStringAsync().ConfigureAwait(false);
-            log.LogInformation($"Received events: {requestContent}");
+            var reader = new StreamReader(req.Body);
+            string requestContent = await reader.ReadToEndAsync().ConfigureAwait(false);
+            log.LogInformation("Received events: {RequestContent}", requestContent);
 
             EventGridSubscriber eventGridSubscriber = new EventGridSubscriber();
 
@@ -57,16 +61,16 @@ namespace DFC.EventGridSubscriptions.ApiFunction
                         throw new InvalidDataException($"{nameof(SubscriptionValidationEventData)} in EventGridEvent {eventGridEvent.Id} is null");
                     }
 
-                    log.LogInformation($"Got SubscriptionValidation event data, validation code: {eventData.ValidationCode}, topic: {eventGridEvent.Topic}");
+                    log.LogInformation("Got SubscriptionValidation event data, validation code: {ValidationCode}, topic: {Topic}", eventData.ValidationCode, eventGridEvent.Topic);
 
                     var responseData = new SubscriptionValidationResponse()
                     {
                         ValidationResponse = eventData.ValidationCode,
                     };
 
-                    return new HttpResponseMessage(HttpStatusCode.OK)
+                    return new JsonResult(responseData, new JsonSerializerOptions())
                     {
-                        Content = new StringContent(JsonConvert.SerializeObject(responseData), Encoding.UTF8, "application/json"),
+                        StatusCode = (int)HttpStatusCode.OK,
                     };
                 }
                 else if (eventGridEvent.Data.GetType() == typeof(StorageBlobCreatedEventData))
@@ -81,7 +85,7 @@ namespace DFC.EventGridSubscriptions.ApiFunction
                         throw new InvalidDataException($"{nameof(StorageBlobCreatedEventData)} in EventGridEvent {eventGridEvent.Id} is null");
                     }
 
-                    if (eventData?.Url.Contains(options.CurrentValue.DeadLetterBlobContainerName, StringComparison.OrdinalIgnoreCase) == true)
+                    if (eventData.Url.Contains(options.CurrentValue.DeadLetterBlobContainerName, StringComparison.OrdinalIgnoreCase))
                     {
                         log.LogInformation("Processing Dead Lettered Event");
 
@@ -91,26 +95,26 @@ namespace DFC.EventGridSubscriptions.ApiFunction
                         int endIndex = eventData.Url.IndexOf("/", startIndex, StringComparison.OrdinalIgnoreCase);
                         var subscriberName = eventData.Url[startIndex..endIndex];
 
-                        log.LogError($"Dead Lettered Event, Blob URL: {eventData.Url}, SubscriberName {subscriberName}");
+                        log.LogError("Dead Lettered Event, Blob URL: {Url}, SubscriberName {SubscriberName}", eventData.Url, subscriberName);
 
                         if (options.CurrentValue.DeadLetterStaleSubscriptionRemovalEnabled)
                         {
                             var result = await subscriptionService.StaleSubscription(subscriberName).ConfigureAwait(false);
-                            return new HttpResponseMessage(result);
+                            return new StatusCodeResult((int)result);
                         }
 
-                        return new HttpResponseMessage(HttpStatusCode.OK);
+                        return new OkResult();
                     }
                 }
             }
 
-            return new HttpResponseMessage(HttpStatusCode.OK)
+            return new JsonResult(response, new JsonSerializerOptions())
             {
-                Content = new StringContent(JsonConvert.SerializeObject(response), Encoding.UTF8, "application/json"),
+                StatusCode = (int)HttpStatusCode.OK,
             };
         }
 
-        private static void Initialise(HttpRequestMessage req)
+        private static void Initialise(HttpRequest req)
         {
             Activity.Current ??= new Activity($"{nameof(DeadLetterHttpTrigger)}").Start();
 

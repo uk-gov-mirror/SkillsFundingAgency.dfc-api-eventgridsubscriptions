@@ -6,6 +6,12 @@
     }
   },
   "logging": {
-    "fileLoggingMode": "always"
+    "fileLoggingMode": "always",
+    "applicationInsights": {
+      "samplingSettings": {
+        "isEnabled": true,
+        "excludedTypes": "Request"
+      }
+    }
   }
 }

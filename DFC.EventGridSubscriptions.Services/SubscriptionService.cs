@@ -36,7 +36,7 @@ namespace DFC.EventGridSubscriptions.Services
             {
                 ValidateRequest(request);
 
-                logger.LogInformation($"{nameof(AddSubscription)} called for subscription: {request.Name}");
+                logger.LogInformation("{AddSubscription} called for subscription: {RequestName}", nameof(AddSubscription), request.Name);
 
                 await CreateEventGridEventSubscriptionAsync(request.Name!, request.Endpoint!.ToString(), request.Filter);
 
@@ -57,11 +57,13 @@ namespace DFC.EventGridSubscriptions.Services
 
                 return HttpStatusCode.Created;
             }
+            #pragma warning disable S2139
             catch (Exception ex)
             {
-                logger.LogError($"An error occured in {nameof(AddSubscription)} : {ex}");
+                logger.LogError(ex, "An error occurred in {AddSubscription}", nameof(AddSubscription));
                 throw;
             }
+            #pragma warning restore S2139
         }
 
         private static void ValidateRequest(SubscriptionSettings request)
@@ -126,7 +128,7 @@ namespace DFC.EventGridSubscriptions.Services
                     throw new ArgumentNullException(nameof(subscriptionName));
                 }
 
-                logger.LogInformation($"{nameof(DeleteSubscription)} called for subscription: {subscriptionName}");
+                logger.LogInformation("{DeleteSubscription} called for subscription: {SubscriptionName}", nameof(DeleteSubscription), subscriptionName);
 
                 await DeleteEventGridEventSubscriptionAsync(subscriptionName);
 
@@ -141,11 +143,13 @@ namespace DFC.EventGridSubscriptions.Services
 
                 return HttpStatusCode.OK;
             }
+            #pragma warning disable S2139
             catch (Exception ex)
             {
-                logger.LogError($"An error occured in {nameof(DeleteSubscription)} : {ex}");
+                logger.LogError(ex, "An error occurred in {DeleteSubscription}", nameof(DeleteSubscription));
                 throw;
             }
+            #pragma warning restore S2139
         }
 
         private async Task DeleteEventGridEventSubscriptionAsync(string subscriptionName)
@@ -153,11 +157,11 @@ namespace DFC.EventGridSubscriptions.Services
             Topic topic = await eventGridManagementClient.Topic_GetAsync(eventGridSubscriptionClientOptions!.CurrentValue!.ResourceGroup!, eventGridSubscriptionClientOptions!.CurrentValue!.TopicName!);
             string eventSubscriptionScope = topic.Id;
 
-            logger.LogInformation($"Deleting subscription {subscriptionName} from topic {topic.Name}...");
+            logger.LogInformation("Deleting subscription {SubscriptionName} from topic {TopicName}", subscriptionName, topic.Name);
 
             await eventGridManagementClient.Subscription_DeleteAsync(eventSubscriptionScope, subscriptionName);
 
-            logger.LogInformation("EventGrid event subscription deleted with name " + subscriptionName);
+            logger.LogInformation("EventGrid event subscription deleted with name {SubscriptionName}", subscriptionName);
         }
 
         private async Task CreateEventGridEventSubscriptionAsync(string eventSubscriptionName, string endpointUrl, SubscriptionFilter? filter)
@@ -165,7 +169,7 @@ namespace DFC.EventGridSubscriptions.Services
             Topic topic = await eventGridManagementClient.Topic_GetAsync(eventGridSubscriptionClientOptions!.CurrentValue!.ResourceGroup!, eventGridSubscriptionClientOptions!.CurrentValue!.TopicName!);
             string eventSubscriptionScope = topic.Id;
 
-            logger.LogInformation($"Creating an event subscription to topic {topic.Name}...");
+            logger.LogInformation("Creating an event subscription to topic {TopicName}", topic.Name);
 
             EventSubscription eventSubscription = new EventSubscription()
             {
@@ -195,10 +199,10 @@ namespace DFC.EventGridSubscriptions.Services
             };
 
             EventSubscription createdEventSubscription = await eventGridManagementClient.Subscription_CreateOrUpdateAsync(eventSubscriptionScope, eventSubscriptionName, eventSubscription);
-            logger.LogInformation("EventGrid event subscription created with name " + createdEventSubscription.Name);
+            logger.LogInformation("EventGrid event subscription created with name {CreatedEventSubscriptionName}", createdEventSubscription.Name);
         }
 
-        private IList<AdvancedFilter> BuildAdvancedFilters(SubscriptionFilter filter)
+        private static IList<AdvancedFilter> BuildAdvancedFilters(SubscriptionFilter filter)
         {
             if (filter.PropertyContainsFilters == null && filter.AdvancedFilters == null)
             {

@@ -43,11 +43,13 @@ namespace DFC.EventGridSubscriptions.Services
 
         private async Task<string> GetAuthorizationHeaderAsync()
         {
+            #pragma warning disable S1075
             var app = ConfidentialClientApplicationBuilder
                 .Create(configuration["dfc-api-eventgridsubscriptions-appregistration-id"])
                 .WithClientSecret(configuration["dfc-api-eventgridsubscriptions-appregistration-secret"])
                 .WithAuthority(new Uri("https://login.windows.net/" + configuration["dfc-api-eventgridsubscriptions-appregistration-tenant-id"]))
                 .Build();
+            #pragma warning restore S1075
 
             try
             {

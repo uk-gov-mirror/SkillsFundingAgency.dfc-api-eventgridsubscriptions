@@ -1,11 +1,9 @@
 ﻿using DFC.Compui.Subscriptions.Pkg.Data;
-using DFC.EventGridSubscriptions.ApiFunction.ServiceResult;
 using DFC.EventGridSubscriptions.Data;
 using DFC.EventGridSubscriptions.Services.Interface;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Azure.WebJobs;
-using Microsoft.Azure.WebJobs.Extensions.Http;
+using Microsoft.Azure.Functions.Worker;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.Rest;
@@ -19,7 +17,7 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Web.Http;
 
-namespace DFC.EventGridSubscriptions.ApiFunction
+namespace DFC.EventGridSubscriptions.ApiFunction.Function
 {
     /// <summary>
     /// The Execute Function.
@@ -47,7 +45,7 @@ namespace DFC.EventGridSubscriptions.ApiFunction
         /// <param name="log">The Logger.</param>
         /// <param name="subscriptionName">The subscription name.</param>
         /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
-        [FunctionName("Execute")]
+        [Function("Execute")]
         public async Task<IActionResult> Run(
             [HttpTrigger(AuthorizationLevel.Anonymous, "post", "delete", "get", Route = "Execute/{subscriptionName?}")] HttpRequest req, ILogger log, string subscriptionName)
         {
@@ -75,24 +73,22 @@ namespace DFC.EventGridSubscriptions.ApiFunction
             }
             catch (ArgumentNullException e)
             {
-                log.LogError(e.ToString());
+                log.LogError(e, e.Message);
                 return new StatusCodeResult((int)HttpStatusCode.BadRequest);
             }
             catch (ArgumentException e)
             {
-                log.LogError(e.ToString());
+                log.LogError(e, e.Message);
                 return new StatusCodeResult((int)HttpStatusCode.BadRequest);
             }
             catch (RestException e)
             {
-                log.LogError(e.ToString());
+                log.LogError(e, e.Message);
                 return new StatusCodeResult((int)HttpStatusCode.ServiceUnavailable);
             }
-#pragma warning disable CA1031 // Do not catch general exception types
             catch (Exception e)
-#pragma warning restore CA1031 // Do not catch general exception types
             {
-                log.LogError(e.ToString());
+                log.LogError(e, e.Message);
                 return new InternalServerErrorResult();
             }
         }
@@ -104,7 +100,7 @@ namespace DFC.EventGridSubscriptions.ApiFunction
                 var content = await stream.ReadToEndAsync().ConfigureAwait(false);
 
                 //Extract Request Body and Parse To Class
-                return JsonConvert.DeserializeObject<SubscriptionSettings>(content) ?? throw new Exception("GetBodyParametersAsync body is null");
+                return JsonConvert.DeserializeObject<SubscriptionSettings>(content) ?? throw new ArgumentNullException($"{nameof(body)}");
             }
         }
 
