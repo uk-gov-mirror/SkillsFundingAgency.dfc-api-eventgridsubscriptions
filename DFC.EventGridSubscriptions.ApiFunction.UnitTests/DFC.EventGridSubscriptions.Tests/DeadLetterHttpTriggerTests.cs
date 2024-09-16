@@ -6,9 +6,14 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 using System;
+using System.IO;
 using System.Net;
 using System.Net.Http;
+using System.Text;
 using System.Threading.Tasks;
+using DFC.EventGridSubscriptions.ApiFunction.Function;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Xunit;
 
 namespace DFC.EventGridSubscriptions.ApiFunction.UnitTests.DFC.EventGridSubscriptions.Tests
@@ -17,6 +22,7 @@ namespace DFC.EventGridSubscriptions.ApiFunction.UnitTests.DFC.EventGridSubscrip
     {
         private readonly DeadLetterHttpTrigger _executeFunction;
         private readonly ILogger _log;
+        private readonly HttpRequest _request;
         private readonly ISubscriptionService subscriptionRegistrationService;
         private readonly IOptionsMonitor<EventGridSubscriptionClientOptions> eventGridSubscriptionClientOptions;
 
@@ -46,13 +52,19 @@ namespace DFC.EventGridSubscriptions.ApiFunction.UnitTests.DFC.EventGridSubscrip
             // Arrange
             string expectedValidationCode = Guid.NewGuid().ToString();
             var eventGridEvents = BuildValidEventGridEvent(Microsoft.Azure.EventGrid.EventTypes.EventGridSubscriptionValidationEvent, new SubscriptionValidationEventData(expectedValidationCode, "https://somewhere.com"));
-
+            var json = JsonConvert.SerializeObject(eventGridEvents);
+            var stream = new MemoryStream(Encoding.UTF8.GetBytes(json));
+            var request = new DefaultHttpContext()
+            {
+                Request = { Body = stream, ContentLength = stream.Length }
+            };
 
             // Act
-            var result = await RunFunction(new HttpRequestMessage { Content = new StringContent(JsonConvert.SerializeObject(eventGridEvents)) });
+            var result = await RunFunction(request.Request);
+            var resultResponse = result as JsonResult;
 
             // Assert
-            Assert.Equal(200, (int)result.StatusCode);
+            Assert.Equal(200, resultResponse.StatusCode);
             var responseResult = Assert.IsType<HttpResponseMessage>(result);
             var response = JsonConvert.DeserializeObject<SubscriptionValidationResponse>(await responseResult.Content.ReadAsStringAsync());
 
@@ -66,21 +78,27 @@ namespace DFC.EventGridSubscriptions.ApiFunction.UnitTests.DFC.EventGridSubscrip
             A.CallTo(() => eventGridSubscriptionClientOptions.CurrentValue).Returns(new EventGridSubscriptionClientOptions { DeadLetterBlobContainerName = "event-grid-dead-letter-events", TopicName = "dfc-dev-stax-egt", DeadLetterStaleSubscriptionRemovalEnabled = true });
             A.CallTo(() => subscriptionRegistrationService.StaleSubscription(A<string>.Ignored)).Returns(HttpStatusCode.OK);
 
-            string expectedValidationCode = Guid.NewGuid().ToString();
             var eventGridEvents = BuildValidEventGridEvent(Microsoft.Azure.EventGrid.EventTypes.StorageBlobCreatedEvent, new StorageBlobCreatedEventData() { Url = "https://dfcdevcompuisharedstr.blob.core.windows.net/event-grid-dead-letter-events/dfc-dev-stax-egt/TEST-SUBSCRIPTION-CONTACTUS-TEST/2020/8/6/9/76d47aaa-be54-495e-993f-4bb1ba65cddb.json" });
+            var json = JsonConvert.SerializeObject(eventGridEvents);
+            var stream = new MemoryStream(Encoding.UTF8.GetBytes(json));
+            var request = new DefaultHttpContext()
+            {
+                Request = { Body = stream, ContentLength = stream.Length }
+            };
 
             // Act
-            var result = await RunFunction(new HttpRequestMessage { Content = new StringContent(JsonConvert.SerializeObject(eventGridEvents)) });
+            var result = await RunFunction(request.Request);
+            var resultResponse = result as JsonResult;
 
             // Assert
-            Assert.Equal(200, (int)result.StatusCode);
+            Assert.Equal(200, resultResponse.StatusCode);
             A.CallTo(() => subscriptionRegistrationService.StaleSubscription(A<string>.Ignored)).MustHaveHappenedOnceExactly();
         }
 
 
-        private async Task<HttpResponseMessage> RunFunction(HttpRequestMessage message)
+        private async Task<IActionResult> RunFunction(HttpRequest request)
         {
-            return await _executeFunction.Run(message, _log).ConfigureAwait(false);
+            return await _executeFunction.Run(request, _log).ConfigureAwait(false);
         }
 
         protected static EventGridEvent[] BuildValidEventGridEvent<TModel>(string eventType, TModel data)

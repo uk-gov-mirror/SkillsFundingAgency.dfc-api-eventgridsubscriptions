@@ -1,6 +1,6 @@
-﻿using FakeItEasy;
+﻿using DFC.EventGridSubscriptions.ApiFunction.Function;
+using FakeItEasy;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Http.Internal;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Xunit;
@@ -17,7 +17,7 @@ namespace DFC.EventGridSubscriptions.ApiFunction.UnitTests.DFC.EventGridSubscrip
             // Arrange
 
             // Act
-            var result = HealthPingHttpTrigger.Run(new DefaultHttpRequest(new DefaultHttpContext()), logger);
+            var result = HealthPingHttpTrigger.Run(new DefaultHttpContext().Request, logger);
 
             // Assert
             Assert.IsType<OkResult>(result);
