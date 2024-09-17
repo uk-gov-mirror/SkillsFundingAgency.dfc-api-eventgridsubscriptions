@@ -144,7 +144,7 @@ $vaultKey = Get-AzKeyVaultSecret -Name "$($RepoName)-appregistration-id" -VaultN
 if (!$vaultKey){
     Write-Verbose "ServicePrincipal $($RepoName)-appregistration-id secret not found in KeyVault $($KeyVault.VaultName)"
     Write-Verbose "Adding ServicePrincipal $($RepoName)-appregistration-id secret to KeyVault $($KeyVault.VaultName)"
-    $SecureAppId = ConvertTo-SecureString -String $AdServicePrincipal.ApplicationId -AsPlainText -Force
+    $SecureAppId = ConvertTo-SecureString -String $AdServicePrincipal.AppId -AsPlainText -Force
     $Secret2 = Set-AzKeyVaultSecret -Name "$($RepoName)-appregistration-id" -SecretValue $SecureAppId -VaultName $KeyVault.VaultName
     $Secret2.Id
     Write-Verbose "Added ServicePrincipal $($RepoName)-appregistration-id secret to KeyVault $($KeyVault.VaultName)"
@@ -175,7 +175,7 @@ $roleAssignment = Get-AzRoleAssignment `
 if (!$roleAssignment) {
     Write-Verbose "'Owner' Role assignment to $($AdServicePrincipal.ServicePrincipalNames) for $($EventGridTopicName) NOT FOUND"
     Write-Verbose "Adding 'Owner' Role assignment to $($AdServicePrincipal.ServicePrincipalNames) for $($EventGridTopicName)"
-    New-AzRoleAssignment -ApplicationId $AdServicePrincipal.ApplicationId  `
+    New-AzRoleAssignment -ApplicationId $AdServicePrincipal.AppId  `
         -ResourceType "Microsoft.EventGrid/topics"  `
         -ResourceName $EventGridTopicName  `
         -ResourceGroupName $EventGridResourceGroup  `
@@ -197,7 +197,7 @@ $roleAssignment = Get-AzRoleAssignment `
 if (!$roleAssignment) {
     Write-Verbose "'Storage Blob Data Contributor' Role assignment to $($AdServicePrincipal.ServicePrincipalNames) for $($appSharedStorageAccountName) NOT FOUND"
     Write-Verbose "Adding 'Storage Blob Data Contributor' Role assignment to $($AdServicePrincipal.ServicePrincipalNames) for $($appSharedStorageAccountName)"
-    New-AzRoleAssignment -ApplicationId $AdServicePrincipal.ApplicationId `
+    New-AzRoleAssignment -ApplicationId $AdServicePrincipal.AppId `
         -RoleDefinitionName "Storage Blob Data Contributor" `
         -Scope $storageid -Verbose
     Write-Verbose "Added 'Storage Blob Data Contributor' Role assignment to $($AdServicePrincipal.ServicePrincipalNames) for $($appSharedStorageAccountName)"
@@ -211,7 +211,7 @@ $roleAssignment = Get-AzRoleAssignment `
 if (!$roleAssignment) {
     Write-Verbose "'Contributor' Role assignment to $($AdServicePrincipal.ServicePrincipalNames) for $($appSharedStorageAccountName) NOT FOUND"
     Write-Verbose "Adding 'Contributor' Role assignment to $($AdServicePrincipal.ServicePrincipalNames) for $($appSharedStorageAccountName)"
-    New-AzRoleAssignment -ApplicationId $AdServicePrincipal.ApplicationId `
+    New-AzRoleAssignment -ApplicationId $AdServicePrincipal.AppId `
         -RoleDefinitionName "Contributor" `
         -Scope $storageid -Verbose
     Write-Verbose "Added 'Contributor' Role assignment to $($AdServicePrincipal.ServicePrincipalNames) for $($appSharedStorageAccountName)"
