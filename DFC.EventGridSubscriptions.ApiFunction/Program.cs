@@ -21,12 +21,10 @@ var host = new HostBuilder()
             .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
             .AddJsonFile($"appsettings.{Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT")}.json", optional: true, reloadOnChange: true)
             .AddEnvironmentVariables();
-
         var config = configBuilder.Build();
 
         services.AddOptions<EventGridSubscriptionClientOptions>()
             .Configure<IConfiguration>((settings, configuration) => { configuration.GetSection("EventGridSubscriptionClientOptions").Bind(settings); });
-
         services.AddOptions<AdvancedFilterOptions>()
             .Configure<IConfiguration>((settings, configuration) => { configuration.GetSection("AdvancedFilterOptions").Bind(settings); });
 
@@ -44,6 +42,7 @@ var host = new HostBuilder()
     .Build();
 
 await host.RunAsync();
+
 return;
 
 static string GetCustomSettingsPath()
