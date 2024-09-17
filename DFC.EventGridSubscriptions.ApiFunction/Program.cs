@@ -3,6 +3,7 @@ using DFC.Compui.Cosmos.Contracts;
 using DFC.EventGridSubscriptions.ApiFunction;
 using DFC.EventGridSubscriptions.Data;
 using DFC.EventGridSubscriptions.Services.Extensions;
+using Microsoft.Azure.Functions.Worker;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -14,6 +15,9 @@ var host = new HostBuilder()
     .ConfigureFunctionsWebApplication()
     .ConfigureServices(services =>
     {
+        services.AddApplicationInsightsTelemetryWorkerService();
+        services.ConfigureFunctionsApplicationInsights();
+
         var configBuilder = new ConfigurationBuilder()
             .SetBasePath(GetCustomSettingsPath())
             .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
