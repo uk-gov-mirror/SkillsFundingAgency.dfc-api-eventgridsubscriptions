@@ -1,19 +1,18 @@
-﻿using DFC.EventGridSubscriptions.Data;
+﻿using DFC.EventGridSubscriptions.ApiFunction.Function;
+using DFC.EventGridSubscriptions.Data;
 using DFC.EventGridSubscriptions.Services.Interface;
 using FakeItEasy;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.EventGrid.Models;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Newtonsoft.Json;
 using System;
 using System.IO;
 using System.Net;
-using System.Net.Http;
 using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
-using DFC.EventGridSubscriptions.ApiFunction.Function;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
 using Xunit;
 
 namespace DFC.EventGridSubscriptions.ApiFunction.UnitTests.DFC.EventGridSubscriptions.Tests
@@ -51,7 +50,7 @@ namespace DFC.EventGridSubscriptions.ApiFunction.UnitTests.DFC.EventGridSubscrip
             // Arrange
             string expectedValidationCode = Guid.NewGuid().ToString();
             var eventGridEvents = BuildValidEventGridEvent(Microsoft.Azure.EventGrid.EventTypes.EventGridSubscriptionValidationEvent, new SubscriptionValidationEventData(expectedValidationCode, "https://somewhere.com"));
-            var json = JsonConvert.SerializeObject(eventGridEvents);
+            var json = JsonSerializer.Serialize(eventGridEvents);
             var stream = new MemoryStream(Encoding.UTF8.GetBytes(json));
             var request = new DefaultHttpContext()
             {
@@ -64,8 +63,8 @@ namespace DFC.EventGridSubscriptions.ApiFunction.UnitTests.DFC.EventGridSubscrip
 
             // Assert
             Assert.Equal(200, resultResponse.StatusCode);
-            var responseResult = Assert.IsType<HttpResponseMessage>(result);
-            var response = JsonConvert.DeserializeObject<SubscriptionValidationResponse>(await responseResult.Content.ReadAsStringAsync());
+            var jsonString = JsonSerializer.Serialize(resultResponse.Value);
+            var response = JsonSerializer.Deserialize<SubscriptionValidationResponse>(jsonString);
 
             Assert.Equal(expectedValidationCode, response.ValidationResponse);
         }
@@ -78,7 +77,7 @@ namespace DFC.EventGridSubscriptions.ApiFunction.UnitTests.DFC.EventGridSubscrip
             A.CallTo(() => subscriptionRegistrationService.StaleSubscription(A<string>.Ignored)).Returns(HttpStatusCode.OK);
 
             var eventGridEvents = BuildValidEventGridEvent(Microsoft.Azure.EventGrid.EventTypes.StorageBlobCreatedEvent, new StorageBlobCreatedEventData() { Url = "https://dfcdevcompuisharedstr.blob.core.windows.net/event-grid-dead-letter-events/dfc-dev-stax-egt/TEST-SUBSCRIPTION-CONTACTUS-TEST/2020/8/6/9/76d47aaa-be54-495e-993f-4bb1ba65cddb.json" });
-            var json = JsonConvert.SerializeObject(eventGridEvents);
+            var json = JsonSerializer.Serialize(eventGridEvents);
             var stream = new MemoryStream(Encoding.UTF8.GetBytes(json));
             var request = new DefaultHttpContext()
             {
@@ -87,7 +86,7 @@ namespace DFC.EventGridSubscriptions.ApiFunction.UnitTests.DFC.EventGridSubscrip
 
             // Act
             var result = await RunFunction(request.Request);
-            var resultResponse = result as JsonResult;
+            var resultResponse = result as OkResult;
 
             // Assert
             Assert.Equal(200, resultResponse.StatusCode);

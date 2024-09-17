@@ -7,9 +7,9 @@ using Microsoft.Azure.Functions.Worker;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.Rest;
-using Newtonsoft.Json;
 using System.Diagnostics;
 using System.Net;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Web.Http;
 
@@ -98,7 +98,7 @@ namespace DFC.EventGridSubscriptions.ApiFunction.Function
                 var content = await stream.ReadToEndAsync().ConfigureAwait(false);
 
                 //Extract Request Body and Parse To Class
-                return JsonConvert.DeserializeObject<SubscriptionSettings>(content) ?? throw new ArgumentNullException($"{nameof(body)}");
+                return JsonSerializer.Deserialize<SubscriptionSettings>(content) ?? throw new ArgumentNullException($"{nameof(body)}");
             }
         }
 

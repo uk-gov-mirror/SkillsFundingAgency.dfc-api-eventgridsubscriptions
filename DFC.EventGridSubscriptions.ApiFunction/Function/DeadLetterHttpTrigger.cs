@@ -96,7 +96,7 @@ namespace DFC.EventGridSubscriptions.ApiFunction.Function
                         if (options.CurrentValue.DeadLetterStaleSubscriptionRemovalEnabled)
                         {
                             var result = await subscriptionService.StaleSubscription(subscriberName).ConfigureAwait(false);
-                            return new StatusCodeResult((int)result);
+                            return HandleHttpStatusCode(result);
                         }
 
                         return new OkResult();
@@ -118,6 +118,30 @@ namespace DFC.EventGridSubscriptions.ApiFunction.Function
             {
                 throw new ArgumentNullException(nameof(req));
             }
+        }
+
+        private static IActionResult HandleHttpStatusCode(HttpStatusCode statusCode)
+        {
+            return statusCode switch
+            {
+                HttpStatusCode.OK => // 200
+                    new OkResult(),
+                HttpStatusCode.Created => // 201
+                    new CreatedResult(),
+                HttpStatusCode.BadRequest => // 400
+                    new BadRequestResult(),
+                HttpStatusCode.Unauthorized => // 401
+                    new UnauthorizedResult(),
+                HttpStatusCode.Forbidden => // 403
+                    new ForbidResult(),
+                HttpStatusCode.NotFound => // 404
+                    new NotFoundResult(),
+                HttpStatusCode.Conflict => // 409
+                    new ConflictResult(),
+                HttpStatusCode.InternalServerError => // 500
+                    new StatusCodeResult(500),
+                _ => new StatusCodeResult((int)statusCode)
+            };
         }
     }
 }

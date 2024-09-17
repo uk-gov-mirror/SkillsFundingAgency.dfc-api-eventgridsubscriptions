@@ -1,4 +1,5 @@
 ﻿using DFC.Compui.Subscriptions.Pkg.Data;
+using DFC.EventGridSubscriptions.ApiFunction.Function;
 using DFC.EventGridSubscriptions.Data;
 using DFC.EventGridSubscriptions.Services.Interface;
 using FakeItEasy;
@@ -8,15 +9,14 @@ using Microsoft.Azure.Management.EventGrid.Models;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.Rest;
-using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Net;
 using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
 using System.Web.Http;
-using DFC.EventGridSubscriptions.ApiFunction.Function;
 using Xunit;
 
 namespace DFC.EventGridSubscriptions.ApiFunction.UnitTests.DFC.EventGridSubscriptions.Tests
@@ -420,7 +420,7 @@ namespace DFC.EventGridSubscriptions.ApiFunction.UnitTests.DFC.EventGridSubscrip
                 advancedFilters.Add(new SubscriptionPropertyContainsFilter { Key = "subject", Values = new List<string> { "a", "b", "c" }.ToArray() });
             }
 
-            return JsonConvert.SerializeObject(new SubscriptionSettings
+            return JsonSerializer.Serialize(new SubscriptionSettings
             {
                 Endpoint = includeEndpoint ? new Uri(endpointAddress, isUriAbsolute ? UriKind.Absolute : UriKind.Relative) : null,
                 Filter = new SubscriptionFilter { BeginsWith = includeSimpleFilter ? "abeginswith" : null, EndsWith = includeSimpleFilter ? "anendswith" : null, PropertyContainsFilters = includeAdvancedFilter ? advancedFilters : null },
