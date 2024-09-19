@@ -290,6 +290,10 @@
                             {
                                 "name": "EventGridSubscriptionClientOptions__StaleSubscriptionThreshold",
                                 "value": "1"
+                            },
+                            {
+                                "name": "AzureFunctionsWebHost__hostid",
+                                "value": "[if(greaterOrEquals(length(parameters('functionAppName')), 32), substring(parameters('functionAppName'), sub(length(parameters('functionAppName')), 32)), parameters('functionAppName'))]"
                             }
                         ]
                     }
