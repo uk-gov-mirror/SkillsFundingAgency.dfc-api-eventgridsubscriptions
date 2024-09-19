@@ -8,7 +8,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using System.Diagnostics.CodeAnalysis;
-using System.Reflection;
 
 namespace DFC.EventGridSubscriptions.ApiFunction
 {
@@ -19,25 +18,35 @@ namespace DFC.EventGridSubscriptions.ApiFunction
         {
             var host = new HostBuilder()
                 .ConfigureFunctionsWebApplication()
-                .ConfigureServices(services =>
+                .ConfigureAppConfiguration(builder =>
                 {
+                    builder.AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
+                           .AddJsonFile("local.settings.json", optional: true, reloadOnChange: true)
+                           .AddJsonFile($"appsettings.{Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT")}.json", optional: true, reloadOnChange: true)
+                           .AddEnvironmentVariables();
+                })
+                .ConfigureServices((context, services) =>
+                {
+                    var config = context.Configuration;
+
                     services.AddApplicationInsightsTelemetryWorkerService();
                     services.ConfigureFunctionsApplicationInsights();
 
-                    var configBuilder = new ConfigurationBuilder()
-                        .SetBasePath(GetCustomSettingsPath())
-                        .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
-                        .AddJsonFile($"appsettings.{Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT")}.json", optional: true, reloadOnChange: true)
-                        .AddEnvironmentVariables();
+                    var keyVaultName = config["keyvault_name"];
+                    if (string.IsNullOrEmpty(keyVaultName))
+                    {
+                        throw new ArgumentNullException("keyvault_name", "KeyVault name is not provided in configuration.");
+                    }
 
-                    var config = configBuilder.Build();
-
-                    services.AddKeyVaultClient($"https://{config["keyvault_name"]}.vault.azure.net");
+                    services.AddKeyVaultClient($"https://{keyVaultName}.vault.azure.net");
 
                     var keyVaultKeys = config.GetSection("KeyVaultOptions:ApplicationKeyVaultKeys").Get<List<string>>()
                                        ?? throw new ArgumentNullException("ApplicationKeyVaultKeys not found");
 
-                    config = configBuilder.AddKeyVaultConfigurationProvider(keyVaultKeys, services.BuildServiceProvider()).Build();
+                    config = new ConfigurationBuilder()
+                        .AddConfiguration(config)
+                        .AddKeyVaultConfigurationProvider(keyVaultKeys, services.BuildServiceProvider())
+                        .Build();
 
                     services.AddSingleton<IConfiguration>(config);
 
@@ -56,12 +65,11 @@ namespace DFC.EventGridSubscriptions.ApiFunction
 
                     services.Configure<LoggerFilterOptions>(options =>
                     {
-                        // The Application Insights SDK adds a default logging filter that instructs ILogger to capture only Warning and more severe logs. Application Insights requires an explicit override.
-                        // Log levels can also be configured using appsettings.json. For more information, see https://learn.microsoft.com/en-us/azure/azure-monitor/app/worker-service#ilogger-logs
-                        LoggerFilterRule? toRemove = options.Rules.FirstOrDefault(rule => rule.ProviderName
+                        // Remove the default logging filter for Application Insights
+                        var toRemove = options.Rules.FirstOrDefault(rule => rule.ProviderName
                             == "Microsoft.Extensions.Logging.ApplicationInsights.ApplicationInsightsLoggerProvider");
 
-                        if (toRemove is not null)
+                        if (toRemove != null)
                         {
                             options.Rules.Remove(toRemove);
                         }
@@ -70,30 +78,6 @@ namespace DFC.EventGridSubscriptions.ApiFunction
                 .Build();
 
             await host.RunAsync();
-        }
-
-        private static string GetCustomSettingsPath()
-        {
-            var home = Environment.GetEnvironmentVariable("HOME") ?? string.Empty;
-            var path = Path.Combine(home, "site", "wwwroot");
-
-            if (Directory.Exists(path))
-            {
-                return path;
-            }
-
-            path = new Uri(Assembly.GetExecutingAssembly().Location).LocalPath;
-
-            if (string.IsNullOrEmpty(path))
-            {
-                return path ?? throw new ArgumentNullException("Path for settings could not be determined");
-            }
-
-            path = Path.GetDirectoryName(path) ?? string.Empty;
-            var parentDir = Directory.GetParent(path);
-            path = parentDir?.FullName;
-
-            return path ?? throw new ArgumentNullException("Path for settings could not be determined");
         }
     }
 }
