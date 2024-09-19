@@ -8,15 +8,22 @@ using System.Net;
 
 namespace DFC.EventGridSubscriptions.ApiFunction.Function
 {
-    public static class HealthPingHttpTrigger
+    public class HealthPingHttpTrigger
     {
+        private readonly ILogger<HealthPingHttpTrigger> logger;
+
+        public HealthPingHttpTrigger(ILogger<HealthPingHttpTrigger> logger)
+        {
+            this.logger = logger;
+        }
+
         [Function("HealthPing")]
         [Display(Name = "Health ping", Description = "Simple OK response to a health ping")]
         [Response(HttpStatusCode = (int)HttpStatusCode.OK, Description = "OK", ShowSchema = false)]
-        public static IActionResult Run(
-            [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "health/ping")] HttpRequest req, ILogger logger)
+        public IActionResult Run(
+            [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "health/ping")] HttpRequest req)
         {
-            logger.LogInformation($"pinged");
+            logger.LogInformation("Health ping request received. Responding with 200 OK. Method: {Method}, Path: {Path}", req.Method, req.Path);
 
             return new OkResult();
         }

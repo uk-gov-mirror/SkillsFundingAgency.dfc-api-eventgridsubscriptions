@@ -9,15 +9,17 @@ namespace DFC.EventGridSubscriptions.ApiFunction.UnitTests.DFC.EventGridSubscrip
 {
     public class HealthPingHttpTriggerTests
     {
-        private readonly ILogger logger = A.Fake<ILogger>();
+        private readonly ILogger<HealthPingHttpTrigger> logger = A.Fake<ILogger<HealthPingHttpTrigger>>();
 
         [Fact]
-        public void HealthPingHttpTriggerTestsReturnsOk()
+        public void HealthPingHttpTriggerReturnsOk()
         {
             // Arrange
+            var function = new HealthPingHttpTrigger(logger);
+            var httpContext = new DefaultHttpContext();
 
             // Act
-            var result = HealthPingHttpTrigger.Run(new DefaultHttpContext().Request, logger);
+            var result = function.Run(httpContext.Request);
 
             // Assert
             Assert.IsType<OkResult>(result);

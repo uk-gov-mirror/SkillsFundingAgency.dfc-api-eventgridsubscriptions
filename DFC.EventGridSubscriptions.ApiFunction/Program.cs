@@ -21,7 +21,6 @@ namespace DFC.EventGridSubscriptions.ApiFunction
                 .ConfigureAppConfiguration(builder =>
                 {
                     builder.AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
-                           .AddJsonFile("local.settings.json", optional: true, reloadOnChange: true)
                            .AddJsonFile($"appsettings.{Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT")}.json", optional: true, reloadOnChange: true)
                            .AddEnvironmentVariables();
                 })
@@ -31,6 +30,7 @@ namespace DFC.EventGridSubscriptions.ApiFunction
 
                     services.AddApplicationInsightsTelemetryWorkerService();
                     services.ConfigureFunctionsApplicationInsights();
+                    services.AddLogging();
 
                     var keyVaultName = config["keyvault_name"];
                     if (string.IsNullOrEmpty(keyVaultName))
