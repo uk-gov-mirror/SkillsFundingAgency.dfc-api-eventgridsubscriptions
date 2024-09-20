@@ -8,6 +8,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using System.Diagnostics.CodeAnalysis;
+using System.Reflection;
 
 namespace DFC.EventGridSubscriptions.ApiFunction
 {
@@ -20,9 +21,10 @@ namespace DFC.EventGridSubscriptions.ApiFunction
                 .ConfigureFunctionsWebApplication()
                 .ConfigureAppConfiguration(builder =>
                 {
-                    builder.AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
-                           .AddJsonFile($"appsettings.{Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT")}.json", optional: true, reloadOnChange: true)
-                           .AddEnvironmentVariables();
+                    builder.SetBasePath(GetCustomSettingsPath())
+                        .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
+                        .AddJsonFile($"appsettings.{Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT")}.json", optional: true, reloadOnChange: true)
+                        .AddEnvironmentVariables();
                 })
                 .ConfigureServices((context, services) =>
                 {
@@ -78,6 +80,30 @@ namespace DFC.EventGridSubscriptions.ApiFunction
                 .Build();
 
             await host.RunAsync();
+        }
+
+        private static string GetCustomSettingsPath()
+        {
+            var home = Environment.GetEnvironmentVariable("HOME") ?? string.Empty;
+            string? path = Path.Combine(home, "site", "wwwroot");
+
+            if (Directory.Exists(path))
+            {
+                return path;
+            }
+
+            path = new Uri(Assembly.GetExecutingAssembly().Location!).LocalPath;
+
+            if (string.IsNullOrEmpty(path))
+            {
+                return path ?? throw new ArgumentNullException(path);
+            }
+
+            path = Path.GetDirectoryName(path) ?? string.Empty;
+            DirectoryInfo? parentDir = Directory.GetParent(path);
+            path = parentDir?.FullName;
+
+            return path ?? throw new ArgumentNullException(path);
         }
     }
 }
