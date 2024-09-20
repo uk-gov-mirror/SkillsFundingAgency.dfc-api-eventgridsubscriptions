@@ -1,8 +1,9 @@
 using DFC.Compui.Cosmos;
 using DFC.Compui.Cosmos.Contracts;
 using DFC.EventGridSubscriptions.Data;
+using DFC.EventGridSubscriptions.Services;
 using DFC.EventGridSubscriptions.Services.Extensions;
-using Microsoft.Azure.Functions.Worker;
+using DFC.EventGridSubscriptions.Services.Interface;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -19,51 +20,32 @@ namespace DFC.EventGridSubscriptions.ApiFunction
         {
             var host = new HostBuilder()
                 .ConfigureFunctionsWebApplication()
-                .ConfigureAppConfiguration(builder =>
+                .ConfigureServices(services =>
                 {
-                    builder.SetBasePath(GetCustomSettingsPath())
+                    var configBuilder = new ConfigurationBuilder()
+                        .SetBasePath(GetCustomSettingsPath())
                         .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
                         .AddJsonFile($"appsettings.{Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT")}.json", optional: true, reloadOnChange: true)
                         .AddEnvironmentVariables();
-                })
-                .ConfigureServices((context, services) =>
-                {
-                    var config = context.Configuration;
 
-                    services.AddApplicationInsightsTelemetryWorkerService();
-                    services.ConfigureFunctionsApplicationInsights();
-                    services.AddLogging();
+                    var config = configBuilder.Build();
 
-                    var keyVaultName = config["keyvault_name"];
-                    if (string.IsNullOrEmpty(keyVaultName))
-                    {
-                        throw new ArgumentNullException("keyvault_name", "KeyVault name is not provided in configuration.");
-                    }
+                    services.AddOptions<EventGridSubscriptionClientOptions>()
+                        .Configure<IConfiguration>((settings, configuration) => { configuration.GetSection("EventGridSubscriptionClientOptions").Bind(settings); });
 
-                    services.AddKeyVaultClient($"https://{keyVaultName}.vault.azure.net");
+                    services.AddOptions<AdvancedFilterOptions>()
+                        .Configure<IConfiguration>((settings, configuration) => { configuration.GetSection("AdvancedFilterOptions").Bind(settings); });
 
-                    var keyVaultKeys = config.GetSection("KeyVaultOptions:ApplicationKeyVaultKeys").Get<List<string>>()
-                                       ?? throw new ArgumentNullException("ApplicationKeyVaultKeys not found");
-
-                    config = new ConfigurationBuilder()
-                        .AddConfiguration(config)
-                        .AddKeyVaultConfigurationProvider(keyVaultKeys, services.BuildServiceProvider())
-                        .Build();
+                    services.AddKeyVaultClient($"https://{config["keyvault_name"]}.vault.azure.net");
+                    var keyVaultKeys = config.GetSection("KeyVaultOptions:ApplicationKeyVaultKeys").Get<List<string>>() ?? throw new ArgumentNullException();
+                    config = configBuilder.AddKeyVaultConfigurationProvider(keyVaultKeys, services.BuildServiceProvider()).Build();
 
                     services.AddSingleton<IConfiguration>(config);
-
-                    services.Configure<EventGridSubscriptionClientOptions>(config.GetSection("EventGridSubscriptionClientOptions"));
-                    services.Configure<AdvancedFilterOptions>(config.GetSection("AdvancedFilterOptions"));
-
+                    services.AddTransient<ISubscriptionService, SubscriptionService>();
                     services.AddEventGridManagementClient();
 
-                    var cosmosDbConnectionEventGridSubscriptions = config
-                        .GetSection("Configuration:CosmosDbConnections:EventGridSubscriptions")
-                        .Get<CosmosDbConnection>() ?? throw new ArgumentNullException("CosmosDbConnection not found");
-
-                    services.AddDocumentServices<SubscriptionModel>(
-                        cosmosDbConnectionEventGridSubscriptions,
-                        Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT")?.ToUpperInvariant() == "DEVELOPMENT");
+                    var cosmosDbConnectionEventGridSubscriptions = config.GetSection("Configuration:CosmosDbConnections:EventGridSubscriptions").Get<CosmosDbConnection>() ?? throw new ArgumentNullException();
+                    services.AddDocumentServices<SubscriptionModel>(cosmosDbConnectionEventGridSubscriptions, Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT")?.ToUpperInvariant() == "DEVELOPMENT");
 
                     services.Configure<LoggerFilterOptions>(options =>
                     {
