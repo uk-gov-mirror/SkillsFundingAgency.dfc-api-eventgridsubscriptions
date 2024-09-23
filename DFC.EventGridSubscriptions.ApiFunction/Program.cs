@@ -4,6 +4,7 @@ using DFC.EventGridSubscriptions.Data;
 using DFC.EventGridSubscriptions.Services;
 using DFC.EventGridSubscriptions.Services.Extensions;
 using DFC.EventGridSubscriptions.Services.Interface;
+using Microsoft.Azure.Functions.Worker;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -22,6 +23,8 @@ namespace DFC.EventGridSubscriptions.ApiFunction
                 .ConfigureFunctionsWebApplication()
                 .ConfigureServices(services =>
                 {
+                    services.AddApplicationInsightsTelemetryWorkerService();
+                    services.ConfigureFunctionsApplicationInsights();
                     var configBuilder = new ConfigurationBuilder()
                         .SetBasePath(GetCustomSettingsPath())
                         .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
